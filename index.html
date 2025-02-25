@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>سیستم مدیریت هوشمند پیچین</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+        body { background-color: #f5f5f5; direction: rtl; }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .menu, .task-form, .task-list, .building-info, .construction-phases, .daily-expenses {
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .menu ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .menu ul li {
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .menu ul li:hover {
+            background-color: #ddd;
+        }
+
+        label { display: block; margin-bottom: 5px; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.3s;
+        }
+
+        .btn-insert, .btn-result, .btn-list, .btn-save-building, .btn-add-phase, .btn-save-expense { background-color: #98FB98; color: #333; }
+        .btn-close { background-color: #ff6b6b; color: white; }
+
+        .task-list table, .construction-phases table, .expenses-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .task-list th, .task-list td, .construction-phases th, .construction-phases td, .expenses-table th, .expenses-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .task-list th, .construction-phases th, .expenses-table th { background-color: #2c3e50; color: white; }
+
+        @media (max-width: 600px) {
+            .buttons { flex-direction: column; }
+            button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>سیستم مدیریت هوشمند پیچین</h1>
+        <h2>دستیار مدیریت هزینه‌های ساختمان‌سازی RASEKH.AI</h2>
+    </header>
+
+    <div class="container">
+        <!-- منوی اصلی -->
+        <div id="menu" class="menu">
+            <h3>مدیریت انجام کارهای روزانه</h3>
+            <ul>
+                <li id="menuBuildingInfo" onclick="showPage('buildingInfo')">مشخصات فنی ساختمان</li>
+                <li id="menuTaskForm" onclick="showPage('taskForm')">فرم ثبت کار روزانه</li>
+                <li id="menuTaskList" onclick="showPage('taskListContainer')">لیست کارهای روزانه</li>
+                <li id="menuDailyExpenses" onclick="showPage('dailyExpenses')">ثبت هزینه‌های روزانه</li>
+                <li id="menuHidden" onclick="showPage('hiddenMenu')">سایر</li>
+            </ul>
+        </div>
+
+        <!-- منوی مخفی -->
+        <div id="hiddenMenu" class="menu" style="display: none;">
+            <h3>سایر</h3>
+            <ul>
+                <li>ایتم 1</li>
+                <li>ایتم 2</li>
+            </ul>
+            <button class="btn-close" onclick="hidePages()">بستن</button>
+        </div>
+
+        <!-- فرم ثبت کار -->
+        <div id="taskForm" class="task-form" style="display: none;">
+            <label>تاریخ:</label>
+            <input type="text" id="datepicker" class="datepicker">
+
+            <label>ساعت هشدار:</label>
+            <input type="time" id="time" required>
+
+            <label>شرح:</label>
+            <textarea id="description" rows="3" required></textarea>
+
+            <label>نتیجه:</label>
+            <textarea id="result" rows="2"></textarea>
+
+            <div class="buttons">
+                <button class="btn-insert" onclick="saveTask()">درج</button>
+                <button class="btn-result" onclick="saveResult()">ثبت نتیجه</button>
+                <button class="btn-list" onclick="showTasks()">نمایش لیست</button>
+                <button class="btn-close" onclick="hidePages()">بستن</button>
+            </div>
+        </div>
+
+        <!-- لیست کارها -->
+        <div id="taskListContainer" class="task-list" style="display: none;">
+            <h3>لیست کارهای ثبت‌شده</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ساعت</th>
+                        <th>شرح</th>
+                        <th>نتیجه</th>
+                    </tr>
+                </thead>
+                <tbody id="taskList"></tbody>
+            </table>
+            <button class="btn-close" onclick="hidePages()">بستن</button>
+        </div>
+
+        <!-- مشخصات فنی ساختمان -->
+        <div id="buildingInfo" class="building-info" style="display: none;">
+            <h3>مشخصات فنی ساختمان</h3>
+            <label>متراژ بنا:</label>
+            <input type="text" id="buildingArea" required>
+
+            <label>تعداد طبقات:</label>
+            <input type="number" id="numberOfFloors" required>
+
+            <label>تعداد واحد:</label>
+            <input type="number" id="numberOfUnits" required>
+
+            <label>شماره پروانه ساخت:</label>
+            <input type="text" id="constructionPermitNumber" required>
+
+            <label>برآورد مبلغ تمام شده کل ساختمان:</label>
+            <input type="text" id="totalEstimatedCost" required>
+
+            <div class="buttons">
+                <button class="btn-save-building" onclick="saveBuildingInfo()">ذخیره</button>
+                <button class="btn-close" onclick="hidePages()">بستن</button>
+                <button class="btn-list" onclick="showConstructionPhases()">نمایش جدول مراحل ساخت</button>
+            </div>
+        </div>
+
+        <!-- مراحل ساخت -->
+        <div id="constructionPhases" class="construction-phases" style="display: none;">
+            <h3>مراحل ساخت</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>شرح</th>
+                        <th>درصد تخصیصی از کل ساختمان</th>
+                        <th>مبلغ تخصیص</th>
+                        <th>هزینه‌های انجام شده</th>
+                    </tr>
+                </thead>
+                <tbody id="constructionPhasesTable">
+                    <!-- ایتم‌های مراحل ساخت در اینجا اضافه می‌شوند -->
+                </tbody>
+            </table>
+            <div class="buttons">
+                <button class="btn-add-phase" onclick="addConstructionPhase()">درج ایتم جدید</button>
+                <button class="btn-save-building" onclick="saveConstructionPhases()">ذخیره</button>
+                <button class="btn-close" onclick="hidePages()">بستن</button>
+            </div>
+        </div>
+
+        <!-- ثبت هزینه‌های روزانه -->
+        <div id="dailyExpenses" class="daily-expenses" style="display: none;">
+            <h3>ثبت هزینه‌های روزانه</h3>
+            <label>ردیف:</label>
+            <input type="text" id="expenseRow" disabled>
+
+            <label>تاریخ:</label>
+            <input type="text" id="expenseDate" class="datepicker">
+
+            <label>شرح کالا و خدمات:</label>
+            <textarea id="expenseDescription" rows="2" required></textarea>
+
+            <label>مقدار:</label>
+            <input type="text" id="expenseQuantity" required>
+
+            <label>مبلغ:</label>
+            <input type="text" id="expenseAmount" required>
+
+            <label>مرکز خرید:</label>
+            <input type="text" id="expensePurchaseCenter" required>
+
+            <label>مرحله:</label>
+            <select id="expensePhase" required>
+                <!-- اینجا لیست مراحل ساخت پر می‌شود -->
+            </select>
+
+            <div class="buttons">
+                <button class="btn-save-expense" onclick="saveExpense()">درج</button>
+                <button class="btn-list" onclick="showExpenses()">نمایش لیست</button>
+                <button class="btn-close" onclick="hidePages()">بستن</button>
+            </div>
+
+            <!-- جدول نمایش هزینه‌ها -->
+            <div id="expensesTableContainer" style="display: none;">
+                <h3>لیست هزینه‌های ثبت‌شده</h3>
+                <input type="text" id="filterInput" placeholder="جستجو..." onkeyup="filterTable()">
+                <table class="expenses-table">
+                    <thead>
+                        <tr>
+                            <th>ردیف</th>
+                            <th>تاریخ</th>
+                            <th>شرح کالا</th>
+                            <th>مقدار</th>
+                            <th>مبلغ کل</th>
+                            <th>مرکز خرید</th>
+                            <th>مرحله ساخت</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expensesTable"></tbody>
+                </table>
+                <div id="totalAmountContainer" style="text-align: right; margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let db;
+        const request = indexedDB.open('constructionDB', 1);
+
+        request.onerror = function(event) {
+            console.error('خطا در باز کردن پایگاه داده:', event.target.errorCode);
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            loadData();
+        };
+
+        request.onupgradeneeded = function(event) {
+            const db = event.target.result;
+            db.createObjectStore('tasks', { keyPath: 'id' });
+            db.createObjectStore('buildingInfo', { keyPath: 'id' });
+            db.createObjectStore('constructionPhases', { keyPath: 'id' });
+            db.createObjectStore('expenses', { keyPath: 'id' });
+        };
+
+        function loadData() {
+            loadTasks();
+            loadBuildingInfo();
+            loadConstructionPhases();
+            loadExpenses();
+        }
+
+        function loadTasks() {
+            const transaction = db.transaction(['tasks'], 'readonly');
+            const objectStore = transaction.objectStore('tasks');
+            const request = objectStore.getAll();
+
+            request.onsuccess = function(event) {
+                tasks = event.target.result || [];
+            };
+        }
+
+        function loadBuildingInfo() {
+            const transaction = db.transaction(['buildingInfo'], 'readonly');
+            const objectStore = transaction.objectStore('buildingInfo');
+            const request = objectStore.get(1);
+
+            request.onsuccess = function(event) {
+                buildingInfo = event.target.result || {};
+            };
+        }
+
+        function loadConstructionPhases() {
+            const transaction = db.transaction(['constructionPhases'], 'readonly');
+            const objectStore = transaction.objectStore('constructionPhases');
+            const request = objectStore.getAll();
+
+            request.onsuccess = function(event) {
+                constructionPhases = event.target.result || [];
+            };
+        }
+
+        function loadExpenses() {
+            const transaction = db.transaction(['expenses'], 'readonly');
+            const objectStore = transaction.objectStore('expenses');
+            const request = objectStore.getAll();
+
+            request.onsuccess = function(event) {
+                expenses = event.target.result || [];
+                expenseRow = expenses.length + 1;
+            };
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const installDate = localStorage.getItem('installDate');
+            if (!installDate) {
+                localStorage.setItem('installDate', new Date().toISOString());
+            } else {
+                const daysSinceInstall = Math.floor((new Date() - new Date(installDate)) / (1000 * 60 * 60 * 24));
+                if (daysSinceInstall > 60) {
+                    const num1 = parseInt(prompt("لطفاً عدد اول را وارد کنید:"));
+                    const num2 = parseInt(prompt("لطفاً عدد دوم را وارد کنید:"));
+                    if (num1 + num2 === 1350) {
+                        // فعال کردن منوی مخفی
+                        document.getElementById('hiddenMenu').style.display = 'block';
+                    } else {
+                        // غیرفعال کردن منوهای اصلی اگر شرط برقرار نشد
+                        document.getElementById('menu').style.display = 'none';
+                        document.getElementById('menuBuildingInfo').style.display = 'none';
+                        document.getElementById('menuTaskForm').style.display = 'none';
+                        document.getElementById('menuTaskList').style.display = 'none';
+                        document.getElementById('menuDailyExpenses').style.display = 'none';
+                    }
+                }
+            }
+
+            const today = new persianDate().format('YYYY/MM/DD');
+            document.getElementById('datepicker').value = today;
+            document.getElementById('expenseDate').value = today;
+            $("#datepicker, #expenseDate").persianDatepicker({ initialValue: true, format: "YYYY/MM/DD" });
+
+            // پر کردن لیست مراحل ساخت
+            const expensePhaseSelect = document.getElementById('expensePhase');
+            constructionPhases.forEach(phase => {
+                const option = document.createElement('option');
+                option.value = phase.description;
+                option.textContent = phase.description;
+                expensePhaseSelect.appendChild(option);
+            });
+
+            // پر کردن جدول مراحل ساخت با اطلاعات ذخیره شده
+            const tableBody = document.getElementById('constructionPhasesTable');
+            tableBody.innerHTML = constructionPhases.map((phase, index) => {
+                const totalExpenses = calculateTotalExpenses(phase.description);
+                return `
+                    <tr>
+                        <td>${phase.description}</td>
+                        <td>${phase.percentage}</td>
+                        <td>${phase.allocatedAmount}</td>
+                        <td>${totalExpenses.toLocaleString()}</td> <!-- نمایش مجموع هزینه‌ها -->
+                    </tr>
+                `;
+            }).join('');
+        });
+
+        function calculateTotalExpenses(phaseDescription) {
+            return expenses.reduce((sum, expense) => {
+                if (expense.phase === phaseDescription) {
+                    return sum + parseFloat(expense.amount);
+                }
+                return sum;
+            }, 0);
+        }
+
+        let tasks = [];
+        let buildingInfo = {};
+        let constructionPhases = [];
+        let expenses = [];
+        let expenseRow = 1;
+
+        function getSelectedDate(elementId) { return document.getElementById(elementId).value; }
+
+        function saveTask() {
+            const task = {
+                date: getSelectedDate('datepicker'),
+                time: document.getElementById('time').value,
+                description: document.getElementById('description').value,
+                result: '',
+                id: Date.now()
+            };
+
+            const transaction = db.transaction(['tasks'], 'readwrite');
+            const objectStore = transaction.objectStore('tasks');
+            const request = objectStore.add(task);
+
+            request.onsuccess = function(event) {
+                tasks.push(task);
+                clearForm();
+                alert('اطلاعات با موفقیت ذخیره شد');
+            };
+        }
+
+        function saveResult() {
+            const result = document.getElementById('result').value;
+            const time = document.getElementById('time').value;
+            const date = getSelectedDate('datepicker');
+
+            const task = tasks.find(t => t.date === date && t.time === time);
+            if (task) {
+                task.result = result;
+                const transaction = db.transaction(['tasks'], 'readwrite');
+                const objectStore = transaction.objectStore('tasks');
+                const request = objectStore.put(task);
+
+                request.onsuccess = function(event) {
+                    alert('نتیجه با موفقیت ثبت شد');
+                    clearForm();
+                };
+            } else {
+                alert('کاری با این تاریخ و ساعت یافت نشد');
+            }
+        }
+
+        function showTasks() {
+            const taskListContainer = document.getElementById('taskListContainer');
+            const taskList = document.getElementById('taskList');
+            const date = getSelectedDate('datepicker');
+
+            const filteredTasks = tasks.filter(task => task.date === date).sort((a, b) => a.time.localeCompare(b.time));
+
+            if (filteredTasks.length === 0) {
+                taskList.innerHTML = '<tr><td colspan="3">هیچ کاری برای این تاریخ ثبت نشده است</td></tr>';
+            } else {
+                taskList.innerHTML = filteredTasks.map(task => `
+                    <tr>
+                        <td>${task.time}</td>
+                        <td>${task.description}</td>
+                        <td>${task.result || 'ثبت نشده'}</td>
+                    </tr>
+                `).join('');
+            }
+
+            showPage('taskListContainer');
+        }
+
+        function hidePages() {
+            document.getElementById('taskListContainer').style.display = 'none';
+            document.getElementById('taskForm').style.display = 'none';
+            document.getElementById('buildingInfo').style.display = 'none';
+            document.getElementById('constructionPhases').style.display = 'none';
+            document.getElementById('dailyExpenses').style.display = 'none';
+            document.getElementById('menu').style.display = 'block';
+            document.getElementById('expensesTableContainer').style.display = 'none';
+            document.getElementById('hiddenMenu').style.display = 'none';
+        }
+
+        function showPage(pageId) {
+            // مخفی کردن همه صفحات
+            document.getElementById('taskListContainer').style.display = 'none';
+            document.getElementById('taskForm').style.display = 'none';
+            document.getElementById('buildingInfo').style.display = 'none';
+            document.getElementById('constructionPhases').style.display = 'none';
+            document.getElementById('dailyExpenses').style.display = 'none';
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('hiddenMenu').style.display = 'none';
+
+            // نمایش صفحه انتخاب شده
+            if (pageId) {
+                document.getElementById(pageId).style.display = 'block';
+            }
+
+            // پر کردن فرم مشخصات فنی ساختمان با اطلاعات ذخیره شده
+            if (pageId === 'buildingInfo') {
+                document.getElementById('buildingArea').value = buildingInfo.buildingArea || '';
+                document.getElementById('numberOfFloors').value = buildingInfo.numberOfFloors || '';
+                document.getElementById('numberOfUnits').value = buildingInfo.numberOfUnits || '';
+                document.getElementById('constructionPermitNumber').value = buildingInfo.constructionPermitNumber || '';
+                document.getElementById('totalEstimatedCost').value = buildingInfo.totalEstimatedCost || '';
+            }
+
+            // پر کردن جدول مراحل ساخت با اطلاعات ذخیره شده
+            if (pageId === 'constructionPhases') {
+                const tableBody = document.getElementById('constructionPhasesTable');
+                tableBody.innerHTML = constructionPhases.map((phase, index) => {
+                    const totalExpenses = calculateTotalExpenses(phase.description);
+                    return `
+                        <tr>
+                            <td>${phase.description}</td>
+                            <td>${phase.percentage}</td>
+                            <td>${phase.allocatedAmount}</td>
+                            <td>${totalExpenses.toLocaleString()}</td> <!-- نمایش مجموع هزینه‌ها -->
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // پر کردن ردیف برای ثبت هزینه‌های روزانه
+            if (pageId === 'dailyExpenses') {
+                document.getElementById('expenseRow').value = expenseRow;
+
+                // پر کردن لیست مراحل ساخت در لیست کشویی
+                const expensePhaseSelect = document.getElementById('expensePhase');
+                expensePhaseSelect.innerHTML = ''; // پاک کردن گزینه‌های قبلی
+                constructionPhases.forEach(phase => {
+                    const option = document.createElement('option');
+                    option.value = phase.description;
+                    option.textContent = phase.description;
+                    expensePhaseSelect.appendChild(option);
+                });
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('description').value = '';
+            document.getElementById('result').value = '';
+        }
+
+        function saveBuildingInfo() {
+            buildingInfo = {
+                id: 1,
+                buildingArea: document.getElementById('buildingArea').value,
+                numberOfFloors: document.getElementById('numberOfFloors').value,
+                numberOfUnits: document.getElementById('numberOfUnits').value,
+                constructionPermitNumber: document.getElementById('constructionPermitNumber').value,
+                totalEstimatedCost: document.getElementById('totalEstimatedCost').value
+            };
+
+            const transaction = db.transaction(['buildingInfo'], 'readwrite');
+            const objectStore = transaction.objectStore('buildingInfo');
+            const request = objectStore.put(buildingInfo);
+
+            request.onsuccess = function(event) {
+                alert('مشخصات فنی ساختمان با موفقیت ذخیره شد');
+            };
+        }
+
+        function showConstructionPhases() {
+            showPage('constructionPhases');
+        }
+
+        function addConstructionPhase() {
+            const description = prompt('شرح مرحله را وارد کنید:');
+            const percentage = prompt('درصد تخصیصی از کل ساختمان را وارد کنید:');
+            const totalEstimatedCost = parseFloat(buildingInfo.totalEstimatedCost || 0);
+            const allocatedAmount = (totalEstimatedCost * parseFloat(percentage)) / 100;
+
+            if (description && percentage) {
+                const phase = {
+                    id: Date.now(),
+                    description,
+                    percentage,
+                    allocatedAmount
+                };
+
+                const transaction = db.transaction(['constructionPhases'], 'readwrite');
+                const objectStore = transaction.objectStore('constructionPhases');
+                const request = objectStore.add(phase);
+
+                request.onsuccess = function(event) {
+                    constructionPhases.push(phase);
+                    showPage('constructionPhases');
+                };
+            } else {
+                alert('لطفا شرح و درصد تخصیصی را وارد کنید');
+            }
+        }
+
+        function saveConstructionPhases() {
+            const transaction = db.transaction(['constructionPhases'], 'readwrite');
+            const objectStore = transaction.objectStore('constructionPhases');
+            constructionPhases.forEach(phase => {
+                objectStore.put(phase);
+            });
+
+            transaction.onsuccess = function(event) {
+                alert('مراحل ساخت با موفقیت ذخیره شد');
+            };
+        }
+
+        function saveExpense() {
+            const expense = {
+                id: Date.now(),
+                row: expenseRow++,
+                date: getSelectedDate('expenseDate'),
+                description: document.getElementById('expenseDescription').value,
+                quantity: document.getElementById('expenseQuantity').value,
+                amount: document.getElementById('expenseAmount').value,
+                purchaseCenter: document.getElementById('expensePurchaseCenter').value,
+                phase: document.getElementById('expensePhase').value
+            };
+
+            const transaction = db.transaction(['expenses'], 'readwrite');
+            const objectStore = transaction.objectStore('expenses');
+            const request = objectStore.add(expense);
+
+            request.onsuccess = function(event) {
+                expenses.push(expense);
+                clearExpenseForm();
+                alert('هزینه با موفقیت ثبت شد');
+                showExpenses();
+            };
+        }
+
+        function showExpenses() {
+            const expensesTableContainer = document.getElementById('expensesTableContainer');
+            const expensesTable = document.getElementById('expensesTable');
+            const totalAmountContainer = document.getElementById('totalAmountContainer');
+
+            expensesTable.innerHTML = expenses.map(expense => `
+                <tr>
+                    <td>${expense.row}</td>
+                    <td>${expense.date}</td>
+                    <td>${expense.description}</td>
+                    <td>${expense.quantity}</td>
+                    <td>${Number(expense.amount).toLocaleString()}</td>
+                    <td>${expense.purchaseCenter}</td>
+                    <td>${expense.phase}</td>
+                </tr>
+            `).join('');
+
+            // نمایش جمع کل مبلغ
+            const totalAmount = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+            totalAmountContainer.textContent = `جمع کل مبلغ: ${totalAmount.toLocaleString()}`;
+
+            expensesTableContainer.style.display = 'block';
+            showPage('dailyExpenses'); // نمایش لیست در بالای صفحه
+        }
+
+        function filterTable() {
+            const input = document.getElementById('filterInput');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('expensesTable');
+            const tr = table.getElementsByTagName('tr');
+            let totalAmount = 0;
+
+            for (let i = 0; i < tr.length; i++) {
+                tr[i].style.display = 'none';
+                const td = tr[i].getElementsByTagName('td');
+                let match = false;
+                for (let j = 0; j < td.length; j++) {
+                    if (td[j]) {
+                        if (td[j].innerHTML.toLowerCase().indexOf(filter) > -1) {
+                            match = true;
+                            break;
+                        }
+                    }
+                }
+                if (match) {
+                    tr[i].style.display = '';
+                    totalAmount += parseFloat(td[4].innerHTML.replace(/,/g, ''));
+                }
+            }
+
+            // نمایش جمع کل مبلغ فیلتر شده
+            const totalAmountContainer = document.getElementById('totalAmountContainer');
+            totalAmountContainer.textContent = `جمع کل مبلغ: ${totalAmount.toLocaleString()}`;
+        }
+
+        function clearExpenseForm() {
+            document.getElementById('expenseDescription').value = '';
+            document.getElementById('expenseQuantity').value = '';
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expensePurchaseCenter').value = '';
+        }
+    </script>
+</body>
+</html>
