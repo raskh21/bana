@@ -2,6 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <title>سیستم مدیریت هوشمند پیچین</title>
@@ -108,8 +109,8 @@
             <ul>
                 <li id="menuBuildingInfo" onclick="showPage('buildingInfo')">مشخصات فنی ساختمان</li>
                 <li id="menuTaskForm" onclick="showPage('taskForm')">فرم ثبت کار روزانه</li>
-                <li id="menuTaskList" onclick="showPage('taskListContainer')">لیست کارهای روزانه</li>
-                <li id="menuDailyExpenses" onclick="showPage('dailyExpenses')">ثبت هزینه‌های روزانه</li>
+               <!-- <li id="menuTaskList" onclick="showPage('taskListContainer')">لیست کارهای روزانه</li>-->
+                <li id="menuDailyExpenses" onclick="showPage('dailyExpenses')">ثبت هزینه‌های روزانه ساختمان</li>
                 <li id="menuHidden" onclick="showPage('hiddenMenu')">سایر</li>
             </ul>
         </div>
@@ -685,6 +686,18 @@
             document.getElementById('expenseAmount').value = '';
             document.getElementById('expensePurchaseCenter').value = '';
         }
-    </script>
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
+    });
+  }
+</script>
 </body>
 </html>
